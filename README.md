@@ -1,14 +1,18 @@
 - Automatic FrontEnd Testing 前端自动化测试
 - Code Refactoring 代码重构
+- Test Driven Development(TDD) 测试驱动的开发
 
 **收获：**
+
 1. 彻底入门前端自动化测试
 2. 根据项目完成测试方案选项
 3. 主流前端测试工具使用
 4. 完成前端自动化测试项目落地
 5. 形成多维度前端架构思维
 
-**前端自动化测试产生的背景及原理**
+[TOC]
+
+## 前端自动化测试产生的背景及原理
 
 TypeScript
 Flow
@@ -75,7 +79,7 @@ test('测试减法 3-3',()=>{
 </body>
 </html>
 ```
-**前端自动化测试框架：Jest**
+## 前端自动化测试框架：Jest
 
 性能、功能、易用性
 
@@ -91,13 +95,12 @@ npm install --save-dev jest@24.8.0
 ```
 npx jest --init
 ```
-jest 配置项
+增加 jest 配置项
 
 ```
 npx jest --coverage
 ```
 自动生成覆盖率的报告
-
 
 ```
   "scripts": {
@@ -128,7 +131,7 @@ npm install @babel/core@7.4.5 @babel/preset-env@7.4.5 -D
 }
 
 ```
-**Jest中匹配器**
+## Jest中匹配器
 
 matchers
 
@@ -207,7 +210,7 @@ test('compiling android goes as expected', () => {
 
 https://jestjs.io/docs/zh-Hans/expect
 
-**Jest 命令行工具的使用**
+## Jest 命令行工具的使用
 
 - Press f to run only failed tests.
 - Press o to only run tests related to changed files.
@@ -231,7 +234,7 @@ https://jestjs.io/docs/zh-Hans/expect
 
 watch 默认进入O模式
 
-**异步代码的测试方法**
+## 异步代码的测试方法
 
 
 ```
@@ -346,7 +349,7 @@ test('fetchData 返回结果为 { success:true }', async () => {
     }
 });
 ```
-**Jest中的钩子函数**
+## Jest中的钩子函数
 
 新建counter.js
 
@@ -423,4 +426,238 @@ describe('Counter 的测试代码', () => {
     });
 });
 ```
+## Jest中的Mock
 
+新建mockDemo.js
+
+
+```
+import axios from 'axios'
+
+export const fetchData = () => {
+    return axios.get('/').then(res => res.data)
+}
+
+
+export const getNumber = () => {
+    return 123
+}
+
+// {
+//     data:"(function(){ return '123' })()"
+// }
+```
+
+mockDemo.test.js
+
+第一种：用 jest.mock(...) 函数自动模拟 axios 模块
+```
+import { fetchData } from './mockDemo'
+import axios from 'axios'
+
+jest.mock('axios')
+test('fetchData 测试', () => {
+    axios.get.mockResolvedValue({ 
+        data: "(function(){ return '123' })()" 
+    })
+    return fetchData().then(data => {
+        expect(eval(data)).toEqual('123')
+    })
+})
+
+```
+
+第二种：
+
+新建__mocks__文件夹 里面存放 mockDemo.js
+
+mockDemo.js
+
+用js 模拟数据返回格式
+
+```
+export const fetchData = () => {
+    return new Promise((resolved,reject)=>{
+        resolved({
+            data: "(function(){ return '123' })()" 
+        })
+    })
+}
+
+```
+
+mockDemo.test.js
+```
+jest.mock('./mockDemo')
+import { fetchData } from './mockDemo'
+test('fetchData 测试', () => {
+    return fetchData().then(data => {
+        expect(eval(data)).toEqual('123')
+    })
+})
+```
+
+jest.requireActual('./mockDemo')
+
+```
+jest.mock('./mockDemo')
+import { fetchData } from './mockDemo'
+const { getNumber } = jest.requireActual('./mockDemo')
+
+test('fetchData 测试', () => {
+    return fetchData().then(data => {
+        expect(eval(data)).toEqual('123')
+    })
+})
+
+
+test('getNumber 测试', ()=>{
+    expect(getNumber()).toEqual(123)
+})
+```
+第三种：jest.config.js
+
+
+```
+automock:true
+```
+
+vscode 安装 jest
+
+## mock times
+
+新建 timer.js
+
+
+```
+export default (callback)=>{
+    setTimeout(() => {
+        callback()
+    }, 3000);
+}
+```
+
+timer.test.js
+
+```
+import timer from './timer'
+
+jest.useFakeTimers()
+
+test('timer 测试',()=>{
+    const fn = jest.fn()
+    timer(fn)
+    jest.runAllTimers()
+    expect(fn).toHaveBeenCalledTimes(1)
+})
+
+// runOnlyPendingTimers
+// advanceTimersByTime 时间快进
+```
+
+## es6中类的测试
+
+util.js
+```
+class Util {
+    a(){
+
+    }
+    b(){
+
+    }
+}
+
+export default Util
+```
+util.test.js
+```
+import Util from './util'
+
+let  util = null
+
+beforeAll(()=>{
+    util = new Util()
+})
+
+test('测试a 方法', ()=>{
+
+})
+
+test('测试b 方法', ()=>{
+    
+})
+```
+demo.js
+
+```
+import Util from './util'
+
+const demoFunction = (a,b)=>{
+    const util = new Util()
+    util.a(a)
+    util.b(b)
+}
+
+export default demoFunction
+```
+demo.test.js
+
+
+```
+jest.mock('./util')
+
+// Util,Util.a Util.b jest.fn
+
+import Util from './util'
+
+import demoFunction from './demo'
+
+test('测试 demoFunction', ()=>{
+    demoFunction()
+    expect(Util).toHaveBeenCalled()
+    expect(Util.mock.instances[0].a).toHaveBeenCalled()
+    expect(Util.mock.instances[0].b).toHaveBeenCalled()
+})
+```
+
+模拟mock
+
+```
+const Util = jest.fn()
+Util.prototype.a = jest.fn()
+Util.prototype.b = jest.fn()
+
+export default Util
+```
+
+## Jest中对Dom节点操作测试
+
+
+
+## snapshot 快照
+
+- toMatchSnapshot
+- toMatchInlineSnapshot
+
+合理使用命令行方式
+
+https://jestjs.io/docs/zh-Hans/snapshot-testing
+
+## TDD 的开发流程
+
+- 编写测试用例
+- 运行测试，测试用例无法通过测试
+- 编写代码，使测试用例通过测试
+- 优化代码，完成开发
+- 重复上述步骤
+
+TDD 的优势
+
+- 长期减少回归bug
+- 代码质量更好（组织，可维护性）
+- 测试覆盖率高
+- 错误测试代码不容易出现
+
+## 项目地址
+https://github.com/zhangbinzhbb/Jest-learn
